@@ -1,0 +1,65 @@
+name: Via CEP Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate-cep:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Configurar o ambiente
+    - name: Check out the code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    # 2. Rodar script que faz a requisição para o serviço de CEP usando curl
+    - name: Requisição ViaCEP
+      run: |
+        echo "Recebendo dados..."
+        curl -s "https://viacep.com.br/ws/03818030/json/" -o response.json
+
+    # 3. Validar a resposta e concluir o processo
+    - name: Validar resposta
+      run: |
+        echo "Validando resposta..."
+        if jq '.erro' response.json | grep -q true; then
+          echo "CEP não encontrado"
+          exit 1
+        fi
+        echo "CEP encontrado com sucesso"
+
+    # 4. Exibir os dados da consulta de um CEP qualquer
+    - name: Exibir os dados da consulta
+      run: |
+        echo "Endereço:"
+        cat response.json | jq
+
+    # 5. Rodar o script app.js
+    - name: Instalar dependências
+      run: npm install 
+
+    - name: Rodar app.js
+      run: |
+        echo "Rodando app.js"
+        node app.js
+
+    # 6. Validar se a cidade é São Paulo
+    - name: Validar cidade
+      run: |
+        CITY=$(jq -r '.localidade' response.json)
+        echo "City found: $CITY"
+        if [ "$CITY" != "São Paulo" ]; then
+          echo "Validation failed: City is not São Paulo"
+          exit 1
+        fi
+        echo "Validation passed: City is São Paulo"

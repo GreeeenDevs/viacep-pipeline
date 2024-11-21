@@ -22,13 +22,22 @@ jobs:
       with:
         node-version: '18'
 
-    # 2. Rodar script que faz a requisição para o serviço de CEP usando curl
+    # 2. Rodar o script app.js
+    - name: Instalar dependências
+      run: npm install 
+
+    - name: Rodar app.js
+      run: |
+        echo "Rodando app.js"
+        node app.js
+
+    # 3. Rodar script que faz a requisição para o serviço de CEP usando curl
     - name: Requisição ViaCEP
       run: |
         echo "Recebendo dados..."
         curl -s "https://viacep.com.br/ws/03818030/json/" -o response.json
 
-    # 3. Validar a resposta e concluir o processo
+    # 4. Validar a resposta e concluir o processo
     - name: Validar resposta ViaCEP
       run: |
         echo "Validando resposta..."
@@ -38,30 +47,19 @@ jobs:
         fi
         echo "CEP encontrado com sucesso"
 
-    # 4. Exibir os dados da consulta de um CEP qualquer
+    # 5. Exibir os dados da consulta de um CEP qualquer
     - name: Exibir os dados da consulta
       run: |
         echo "Endereço:"
         cat response.json | jq
 
-    # 5. Rodar o script app.js
-    - name: Instalar dependências
-      run: npm install 
-
-    - name: Rodar app.js
-      run: |
-        echo "Running app.js..."
-        OUTPUT=$(node app.js)
-        echo "$OUTPUT" > app-output.txt
-        echo "::set-output name=output::$OUTPUT"
-
     # 6. Validar se a cidade é São Paulo
     - name: Validar cidade
       run: |
-        CITY=$(grep -o '"localidade":"[^"]*"' app-output.txt | sed 's/"localidade":"//;s/"//')
+        CITY=$(jq -r '.localidade' response.json)
         echo "City found: $CITY"
         if [ "$CITY" != "São Paulo" ]; then
-          echo "Cidade incorreta: A cidade não é São Paulo"
+          echo "Validation failed: City is not São Paulo"
           exit 1
         fi
-        echo "Cidade correta: São Paulo"
+        echo "Validation passed: City is São Paulo"

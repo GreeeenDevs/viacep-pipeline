@@ -14,10 +14,10 @@ jobs:
 
     steps:
     # 1. Configurar o ambiente
-    - name: Check out the code
+    - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Setup Node.js environment
+    - name: Criar ambiente Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18'
@@ -29,7 +29,7 @@ jobs:
         curl -s "https://viacep.com.br/ws/03818030/json/" -o response.json
 
     # 3. Validar a resposta e concluir o processo
-    - name: Validar resposta
+    - name: Validar resposta ViaCEP
       run: |
         echo "Validando resposta..."
         if jq '.erro' response.json | grep -q true; then
@@ -50,16 +50,18 @@ jobs:
 
     - name: Rodar app.js
       run: |
-        echo "Rodando app.js"
-        node app.js
+        echo "Running app.js..."
+        OUTPUT=$(node app.js)
+        echo "$OUTPUT" > app-output.txt
+        echo "::set-output name=output::$OUTPUT"
 
     # 6. Validar se a cidade é São Paulo
     - name: Validar cidade
       run: |
-        CITY=$(jq -r '.localidade' response.json)
+        CITY=$(grep -o '"localidade":"[^"]*"' app-output.txt | sed 's/"localidade":"//;s/"//')
         echo "City found: $CITY"
         if [ "$CITY" != "São Paulo" ]; then
-          echo "Validation failed: City is not São Paulo"
+          echo "Cidade incorreta: A cidade não é São Paulo"
           exit 1
         fi
-        echo "Validation passed: City is São Paulo"
+        echo "Cidade correta: São Paulo"
